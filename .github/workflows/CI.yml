@@ -1,0 +1,24 @@
+name: CI
+
+on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build_and_install:
+    name: Build and Install project
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build project
+        run: cargo build
+
+      - name: Install project
+        run: cargo install --path .
+
+      - name: Check install
+        run: sniffer --help

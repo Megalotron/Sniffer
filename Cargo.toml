@@ -1,0 +1,13 @@
+[package]
+
+name = "sniffer"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "The sniffer of Megalotron"
+homepage = "https://github.com/Megalotron/Sniffer"
+repository = "https://github.com/Megalotron/Sniffer"
+documentation = "https://github.com/Megalotron/Sniffer"
+readme = "README.md"
+
+[dependencies]
