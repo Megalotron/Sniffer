@@ -21,8 +21,5 @@ jobs:
       - name: Build project
         run: cargo build
 
-      - name: Install project
-        run: cargo install --path .
-
-      - name: Check install
-        run: sniffer --help
+      - name: Test project
+        run: cargo test

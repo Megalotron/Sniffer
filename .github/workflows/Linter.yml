@@ -8,7 +8,7 @@ defaults:
 
 jobs:
   linter:
-    name: Linter
+    name: linter
     runs-on: ubuntu-latest
 
     steps:
