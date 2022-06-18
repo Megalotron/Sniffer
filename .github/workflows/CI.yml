@@ -7,8 +7,8 @@ defaults:
     shell: bash
 
 jobs:
-  build_and_install:
-    name: Build and Install project
+  ci:
+    name: ubuntu-latest
     runs-on: ubuntu-latest
 
     steps:
