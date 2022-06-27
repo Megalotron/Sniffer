@@ -1,15 +1,49 @@
-name: CI
+name: Continuous Integration
 
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - src/*
+      - .github/*
+      - Cargo.toml
+  pull_request:
+    paths:
+      - src/*
+      - .github/workflows/*.yml
+      - Cargo.toml
 
 defaults:
   run:
     shell: bash
 
 jobs:
-  ci:
-    name: ubuntu-latest
+  conventional_commits:
+    name: conventional commits
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: webiny/action-conventional-commits@v1.0.5
+
+  linter:
+    name: linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Clippy
+        run: cargo clippy --all --all-features -- -D warnings
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+  ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
@@ -17,8 +51,5 @@ jobs:
       - name: Build project
         run: cargo build
 
-      - name: Install project
-        run: cargo install --path .
-
-      - name: Check install
-        run: sniffer --help
+      - name: Test project
+        run: cargo test
