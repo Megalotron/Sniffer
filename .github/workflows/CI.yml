@@ -2,15 +2,21 @@ name: Continuous Integration
 
 on:
   push:
+    branches:
+      - main
     paths:
       - src/*
-      - .github/*
+      - .github/workflows/ci.yml
       - Cargo.toml
+      - Dockerfile
   pull_request:
+    branches:
+      - main
     paths:
       - src/*
-      - .github/workflows/*.yml
+      - .github/workflows/ci.yml
       - Cargo.toml
+      - Dockerfile
 
 defaults:
   run:
@@ -53,3 +59,18 @@ jobs:
 
       - name: Test project
         run: cargo test
+
+  build:
+    name: Build binary
+    runs-on: ubuntu-latest
+    needs: linter
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build
+        uses: docker/build-push-action@v3
+        with:
+          push: false
+          cache-from: type=gha,scope=sniffer
+          cache-to: type=gha,mode=max,scope=sniffer
