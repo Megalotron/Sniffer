@@ -11,3 +11,6 @@ documentation = "https://github.com/Megalotron/Sniffer"
 readme = "README.md"
 
 [dependencies]
+
+clap = { version = "3.2.5", features = ["derive"] }
+pcap = { version = "0.9.2", features = ["capture-stream"] }
