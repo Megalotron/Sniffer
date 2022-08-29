@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install dependencies
-        run: pip install libpcap
+        run: sudo apt update && sudo apt install -y libpcap-dev
 
       - name: Clippy
         run: cargo clippy --all --all-features -- -D warnings
@@ -58,7 +58,8 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install dependencies
-        run: pip install libpcap
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: sudo apt update && sudo apt install -y libpcap-dev
 
       - name: Build project
         run: cargo build
