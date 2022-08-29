@@ -37,6 +37,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install dependencies
+        run: pip install libpcap
+
       - name: Clippy
         run: cargo clippy --all --all-features -- -D warnings
 
@@ -53,6 +56,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: pip install libpcap
 
       - name: Build project
         run: cargo build
