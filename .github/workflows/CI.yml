@@ -50,15 +50,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest]
+        build: ['', --release]
         include:
-          - os: windows-latest
-            deps: choco install wireshark winpcap -y
           - os: macos-latest
             deps: brew install libpcap
           - os: ubuntu-latest
             deps: sudo apt update && sudo apt install -y libpcap-dev
-    name: ${{ matrix.os }}
+          - build: ''
+            profile: debug
+          - build: --release
+            profile: release
+    name: ${{ matrix.os }} - ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -68,7 +71,7 @@ jobs:
         run: ${{ matrix.deps }}
 
       - name: Build project
-        run: cargo build
+        run: cargo build ${{ matrix.build }}
 
       - name: Test project
         run: cargo test
