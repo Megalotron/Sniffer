@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dev = match args.device {
         Some(dev) => pcap::Device::from(dev.as_str()),
-        None => pcap::Device::lookup()?,
+        None => pcap::Device::lookup()?.unwrap(),
     };
 
     println!("Using device \"{}\"", dev.name);
@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         None => None,
     };
 
-    while let Ok(packet) = cap.next() {
+    while let Ok(packet) = cap.next_packet() {
         if args.verbose {
             println!("received packet! {:?}", packet);
         }
