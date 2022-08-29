@@ -53,7 +53,7 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
         include:
           - os: windows-latest
-            deps: winget install -e --id DaiyuuNobori.Win10Pcap
+            deps: choco install wireshark winpcap -y
           - os: macos-latest
             deps: brew install libpcap
           - os: ubuntu-latest
