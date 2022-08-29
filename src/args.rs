@@ -11,7 +11,7 @@ pub struct Args {
     #[clap(short, long, value_parser, default_value_t = 50051)]
     pub port: u16,
 
-    /// Set pcap output file if you want to save the captured packets
+    /// Path to a pcap output file where to save captured packets
     #[clap(short, long, value_parser)]
     pub output: Option<String>,
 
@@ -19,7 +19,7 @@ pub struct Args {
     #[clap(short, long, value_parser, default_value_t = false)]
     pub verbose: bool,
 
-    /// If provided, the sniffer will use the provided interface
+    /// If provided, the sniffer will use the provided interface instead of the default one
     #[clap(short, long, value_parser)]
     pub device: Option<String>,
 }
