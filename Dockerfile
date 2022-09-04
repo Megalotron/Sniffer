@@ -10,7 +10,7 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies
-RUN apk add --no-cache musl-dev
+RUN apk add --no-cache musl-dev libpcap-dev
 
 # Update dependencies
 RUN cargo update
