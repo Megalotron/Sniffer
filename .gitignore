@@ -10,3 +10,7 @@
 
 /target
 Cargo.lock
+
+# PCAP files
+
+*.pcap

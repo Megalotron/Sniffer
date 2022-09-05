@@ -37,6 +37,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y libpcap-dev
+
       - name: Clippy
         run: cargo clippy --all --all-features -- -D warnings
 
@@ -47,15 +50,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-    name: ${{ matrix.os }}
+        os: [macos-latest, ubuntu-latest]
+        build: ['', --release]
+        include:
+          - os: macos-latest
+            deps: brew install libpcap
+          - os: ubuntu-latest
+            deps: sudo apt update && sudo apt install -y libpcap-dev
+          - build: ''
+            profile: debug
+          - build: --release
+            profile: release
+    name: ${{ matrix.os }} - ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install dependencies
+        run: ${{ matrix.deps }}
+
       - name: Build project
-        run: cargo build
+        run: cargo build ${{ matrix.build }}
 
       - name: Test project
         run: cargo test
