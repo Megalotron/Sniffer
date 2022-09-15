@@ -10,7 +10,7 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies
-RUN apk add --no-cache musl-dev libpcap-dev
+RUN apk add --no-cache musl-dev libpcap-dev libprotobuf-dev protobuf-compiler
 
 # Update dependencies
 RUN cargo update
