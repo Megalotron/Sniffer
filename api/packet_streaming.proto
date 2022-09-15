@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package packet_streaming;
+
+message PacketHeader {
+    uint32 ts_sec = 1;
+    uint32 ts_usec = 2;
+    uint32 caplen = 3;
+    uint32 len = 4;
+}
+
+message PacketData {
+    bytes data = 1;
+}
+
+message Packet {
+    PacketHeader header = 1;
+    PacketData data = 2;
+}
+
+service PacketStreaming {
+    rpc Run(stream Packet) returns (google.protobuf.Empty);
+}
