@@ -10,7 +10,36 @@ repository = "https://github.com/Megalotron/Sniffer"
 documentation = "https://github.com/Megalotron/Sniffer"
 readme = "README.md"
 
+[[bin]]
+name = "sniffer"
+path = "src/main.rs"
+
+[[bin]]
+name = "sniffer-test-server"
+path = "test/main.rs"
+
 [dependencies]
 
 clap = { version = "3.2.17", features = ["derive"] }
 pcap = { version = "0.10.1", features = ["capture-stream"] }
+
+libc = "0.2.132"
+ctrlc = "3.2.2"
+chrono = "0.4.22"
+log = "0.4.17"
+env_logger = "0.9.0"
+lazy_static = "1.4"
+
+tonic = "0.8.0"
+prost = "0.11.0"
+prost-types = "0.11.1"
+
+tokio = { version = "1.20.1", features = ["rt-multi-thread", "macros"] }
+futures-util = "0.3.24"
+async-stream = "0.3.3"
+
+[build-dependencies]
+
+tonic-build = "0.8.0"
+prost-build = "0.11.1"
+protobuf-src = "1.0.5+3.19.3"

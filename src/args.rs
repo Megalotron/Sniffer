@@ -7,13 +7,21 @@ pub struct Args {
     #[clap(short, long, value_parser)]
     pub url: Option<String>,
 
+    /// Path to a pcap input file where to load packets
+    #[clap(short, long, value_parser)]
+    pub input: Option<String>,
+
     /// Path to a pcap output file where to save captured packets
     #[clap(short, long, value_parser)]
     pub output: Option<String>,
 
-    /// The captured packets will be displayed in the shell
-    #[clap(short, long, value_parser, default_value_t = false)]
-    pub verbose: bool,
+    /// Set the verbosity level
+    #[clap(short, long, value_parser, default_value = "info")]
+    pub verbosity: String,
+
+    /// If set, the logs will be save on the provided file
+    #[clap(short, long, value_parser)]
+    pub logfile: Option<String>,
 
     /// The provided network device will be used instead of the default one
     #[clap(short, long, value_parser)]
