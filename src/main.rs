@@ -1,9 +1,10 @@
-mod args;
-mod logger;
-mod sniffer;
+#[allow(clippy::all)]
 mod packet_streaming {
     tonic::include_proto!("packet_streaming");
 }
+mod args;
+mod logger;
+mod sniffer;
 
 use packet_streaming::packet_streaming_client::PacketStreamingClient;
 use packet_streaming::{Packet, PacketData, PacketHeader};

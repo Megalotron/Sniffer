@@ -1,6 +1,8 @@
+#[allow(clippy::all)]
 mod packet_streaming {
     tonic::include_proto!("packet_streaming");
 }
+
 use packet_streaming::packet_streaming_server::{PacketStreaming, PacketStreamingServer};
 use packet_streaming::*;
 

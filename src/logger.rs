@@ -11,7 +11,7 @@ lazy_static! {
     pub static ref LOGGER: Mutex<Logger> = Mutex::new(Logger::new());
 }
 
-#[derive(PartialEq, PartialOrd)]
+#[derive(Eq, PartialEq, PartialOrd)]
 pub enum LogLevel {
     Debug = 0,
     Info = 1,
