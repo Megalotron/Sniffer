@@ -47,6 +47,7 @@ jobs:
         run: cargo fmt --all -- --check
 
   ci:
+    needs: linter
     strategy:
       fail-fast: false
       matrix:
