@@ -82,7 +82,7 @@ jobs:
           diff test/dataset.pcap server.pcap
 
   build:
-    name: Build binary
+    name: build binary
     runs-on: ubuntu-latest
     needs: ci
     steps:
