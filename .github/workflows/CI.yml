@@ -78,7 +78,7 @@ jobs:
         run: |
           cargo run ${{ matrix.build }} --bin sniffer-test-server &
           sleep 1
-          cargo run ${{ matrix.build }} --bin sniffer -- --url http://0.0.0.0:50051 -v debug -i test/dataset.pcap
+          cargo run ${{ matrix.build }} --bin sniffer -- --url http://0.0.0.0:50051 -v debug -r test/dataset.pcap
           diff test/dataset.pcap server.pcap
 
   build:
