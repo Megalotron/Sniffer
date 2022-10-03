@@ -7,13 +7,13 @@ pub struct Args {
     #[clap(short, long, value_parser)]
     pub url: Option<String>,
 
-    /// Path to a pcap input file where to load packets
+    /// Read packets from a pcap file instead of a network interface
     #[clap(short, long, value_parser)]
-    pub input: Option<String>,
+    pub read: Option<String>,
 
-    /// Path to a pcap output file where to save captured packets
+    /// Write captured packets on a pcap file
     #[clap(short, long, value_parser)]
-    pub output: Option<String>,
+    pub write: Option<String>,
 
     /// Set the verbosity level
     #[clap(short, long, value_parser, default_value = "info")]
@@ -23,7 +23,7 @@ pub struct Args {
     #[clap(short, long, value_parser)]
     pub logfile: Option<String>,
 
-    /// The provided network device will be used instead of the default one
+    /// Use a specific network interface instead of the default one
     #[clap(short, long, value_parser)]
-    pub device: Option<String>,
+    pub interface: Option<String>,
 }

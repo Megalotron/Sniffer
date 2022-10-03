@@ -35,21 +35,22 @@ impl Sniffer {
         }));
 
         ctrlc::set_handler(|| {
+            print!("\r");
             logger::get().warn("Sniffer killed by Ctrl c");
             std::process::exit(84);
         })
         .ok();
 
-        if args.input.is_some() && args.device.is_some() {
-            panic!("You can't use both input file and device input at the same time");
+        if args.read.is_some() && args.interface.is_some() {
+            panic!("You can't both read packets from an input file and a network interface");
         }
 
-        let dev = match args.device {
+        let dev = match args.interface {
             Some(ref dev) => pcap::Device::from(dev.as_str()),
             None => pcap::Device::lookup()?.unwrap(),
         };
 
-        let capture: pcap::Capture<dyn pcap::Activated> = match args.input {
+        let capture: pcap::Capture<dyn pcap::Activated> = match args.read {
             Some(ref input) => pcap::Capture::from(pcap::Capture::from_file(input)?),
             None => pcap::Capture::from(
                 pcap::Capture::from_device(dev)?
@@ -58,7 +59,7 @@ impl Sniffer {
             ),
         };
 
-        let savefile = match args.output {
+        let savefile = match args.write {
             Some(ref file) => Some(capture.savefile(file)?),
             None => None,
         };

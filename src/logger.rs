@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::fmt::Display;
 use std::sync::{Mutex, MutexGuard};
 
 use env_logger::{Builder, Target};
@@ -82,7 +83,7 @@ impl Logger {
         self
     }
 
-    fn log_to_file(&mut self, level: LogLevel, message: &impl std::fmt::Display) {
+    fn log_to_file(&mut self, level: LogLevel, message: &impl Display) {
         if let Some(ref mut file) = self.log_file {
             let level = match level {
                 LogLevel::Debug => "DEBUG",
@@ -104,25 +105,25 @@ impl Logger {
         }
     }
 
-    pub fn debug(&mut self, message: impl std::fmt::Display) {
+    pub fn debug(&mut self, message: impl Display) {
         if self.log_level == LogLevel::Debug {
             self.log_to_file(LogLevel::Debug, &message);
         }
         log::debug!(target: self.stack, "{}", message);
     }
-    pub fn info(&mut self, message: impl std::fmt::Display) {
+    pub fn info(&mut self, message: impl Display) {
         if self.log_level <= LogLevel::Info {
             self.log_to_file(LogLevel::Info, &message);
         }
         log::info!(target: self.stack, "{}", message);
     }
-    pub fn warn(&mut self, message: impl std::fmt::Display) {
+    pub fn warn(&mut self, message: impl Display) {
         if self.log_level <= LogLevel::Warn {
             self.log_to_file(LogLevel::Warn, &message);
         }
         log::warn!(target: self.stack, "{}", message);
     }
-    pub fn error(&mut self, message: impl std::fmt::Display) {
+    pub fn error(&mut self, message: impl Display) {
         if self.log_level <= LogLevel::Error {
             self.log_to_file(LogLevel::Error, &message);
         }
