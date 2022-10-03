@@ -1,7 +1,7 @@
+use std::fmt::Display;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::fmt::Display;
 use std::sync::{Mutex, MutexGuard};
 
 use env_logger::{Builder, Target};
@@ -76,7 +76,7 @@ impl Logger {
             LogLevel::Error => LevelFilter::Error,
         };
         Builder::new()
-            .filter(None, verbosity)
+            .filter(Some(self.stack), verbosity)
             .target(Target::Stdout)
             .init();
 
