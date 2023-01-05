@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - src/*
-      - .github/workflows/ci.yml
+      - .github/workflows/*
       - Cargo.toml
       - Dockerfile
   pull_request:
@@ -14,7 +14,7 @@ on:
       - main
     paths:
       - src/*
-      - .github/workflows/ci.yml
+      - .github/workflows/*
       - Cargo.toml
       - Dockerfile
 

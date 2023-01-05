@@ -4,6 +4,8 @@ mod packet_streaming {
 }
 mod args;
 mod logger;
+mod packet;
+mod protocol;
 mod sniffer;
 
 use packet_streaming::packet_streaming_client::PacketStreamingClient;
@@ -12,12 +14,15 @@ use packet_streaming::{Packet, PacketData, PacketHeader};
 use args::Args;
 use async_stream::stream;
 use clap::Parser;
+use colored::Colorize;
 use futures_util::{pin_mut, StreamExt};
+use packet::PacketInfo;
+use sniffer::Sniffer;
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    let mut core = sniffer::Sniffer::new(&args).unwrap();
+    let mut core = Sniffer::new(&args).unwrap();
     let mut client = match args.url {
         Some(ref url) => Some(
             PacketStreamingClient::connect(url.to_owned())
@@ -27,14 +32,19 @@ async fn main() {
         None => None,
     };
 
-    logger::get().info(format!("Sniffer started: {:?}", args));
+    logger::get().info("Sniffer started");
 
     let stream = stream! {
         while let Ok(packet) = core.capture.next_packet() {
-            logger::get().debug(format!("{:?}", packet));
+            match PacketInfo::from(&packet) {
+                Some(info) => logger::get().debug(format!("{}", info)),
+                None => logger::get().debug(format!("[{}] Could not parse the packet", "???".red())),
+            }
+
             if core.savefile.is_some() {
                 core.savefile.as_mut().unwrap().write(&packet);
             }
+
             yield Packet {
                 header: Some(PacketHeader {
                     ts_sec: packet.header.ts.tv_sec as u32,

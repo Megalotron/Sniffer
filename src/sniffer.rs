@@ -36,7 +36,7 @@ impl Sniffer {
 
         ctrlc::set_handler(|| {
             print!("\r");
-            logger::get().warn("Sniffer killed by Ctrl c");
+            logger::get().warn("Sniffer killed by ^C");
             std::process::exit(84);
         })
         .ok();

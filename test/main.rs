@@ -15,10 +15,10 @@ pub struct PacketService;
 #[tonic::async_trait]
 impl PacketStreaming for PacketService {
     async fn run(&self, request: Request<Streaming<Packet>>) -> Result<Response<()>, Status> {
-        let mut stream = request.into_inner();
-
         let cap = pcap::Capture::dead(pcap::Linktype::ETHERNET).unwrap();
+        let mut stream = request.into_inner();
         let mut savefile = cap.savefile("server.pcap").unwrap();
+
         while let Some(packet) = stream.next().await {
             let packet = packet.unwrap();
             let packet_header = packet.header.unwrap();
