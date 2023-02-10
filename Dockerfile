@@ -16,15 +16,17 @@ RUN apk add --no-cache musl-dev libpcap-dev
 RUN cargo update
 
 # Build application
-RUN cargo build
+RUN cargo build --release
 
 ###
 # App stage
 # Final application container
 ###
-FROM busybox AS app
+FROM alpine AS app
 
-COPY --from=builder /app/target/debug/sniffer /bin/sniffer
+RUN apk add --no-cache musl-dev libpcap-dev
 
-ENTRYPOINT [ "sniffer" ]
+COPY --from=builder /app/target/release/sniffer /sniffer
+
+ENTRYPOINT [ "/sniffer" ]
 
