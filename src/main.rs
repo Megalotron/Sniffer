@@ -25,7 +25,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     while let Ok(packet) = cap.next_packet() {
         if args.verbose {
-            println!("{:?}", packet);
+            let msg = format!("{packet:?}");
+            println!("{msg}");
         }
         if savefile.is_some() {
             savefile.as_mut().unwrap().write(&packet);
