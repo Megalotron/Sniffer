@@ -30,8 +30,8 @@ impl PacketStreaming for PacketService {
                         tv_sec: packet_header.ts_sec as libc::time_t,
                         tv_usec: packet_header.ts_usec as libc::suseconds_t,
                     },
-                    caplen: packet_header.caplen as u32,
-                    len: packet_header.len as u32,
+                    caplen: packet_header.caplen,
+                    len: packet_header.len,
                 },
                 &packet_data.data,
             ));

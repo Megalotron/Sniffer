@@ -1,9 +1,33 @@
-use crate::protocol::Protocol;
 use colored::Colorize;
+use pnet::packet::arp::ArpPacket;
+use pnet::packet::ip::IpNextHeaderProtocols;
+use pnet::packet::udp::UdpPacket;
 use std::net::IpAddr;
 
+use pnet::packet::ethernet::{EtherTypes, EthernetPacket};
+use pnet::packet::ipv4::Ipv4Packet;
+use pnet::packet::ipv6::Ipv6Packet;
+use pnet::packet::tcp::TcpPacket;
+use pnet::packet::Packet;
+
+/// The first field is a string that contains the name of the protocol. The next two fields are strings
+/// that contain the source and destination MAC addresses. The next two fields are options of IP
+/// addresses that contain the source and destination IP addresses. The next two fields are options of
+/// numbers that contain the source and destination ports. The last field is a number that contains the
+/// length of the packet.
+///
+/// Properties:
+///
+/// * `protocol`: The protocol of the packet.
+/// * `src_mac`: The source MAC address
+/// * `dst_mac`: The destination MAC address
+/// * `src_ip`: The source IP address of the packet.
+/// * `dst_ip`: The destination IP address
+/// * `src_port`: The source port of the packet.
+/// * `dst_port`: The destination port of the packet.
+/// * `len`: The length of the packet in bytes.
 pub struct PacketInfo {
-    pub protocol: Protocol,
+    pub protocol: String,
     pub src_mac: String,
     pub dst_mac: String,
     pub src_ip: Option<IpAddr>,
@@ -14,80 +38,100 @@ pub struct PacketInfo {
 }
 
 impl PacketInfo {
+    /// > If the packet is an IPv4 packet, parse it as an IPv4 packet, otherwise if it's an IPv6 packet,
+    /// parse it as an IPv6 packet, otherwise if it's an ARP packet, parse it as an ARP packet,
+    /// otherwise parse it as an Ethernet packet.
+    ///
+    /// Arguments:
+    ///
+    /// * `packet`: &[u8] - The packet to parse
+    ///
+    /// Returns:
+    ///
+    /// A `PacketInfo` struct containing all informations about the packet.
     pub fn from(packet: &[u8]) -> Option<Self> {
-        let dst_mac = format!(
-            "{:x}:{:x}:{:x}:{:x}:{:x}:{:x}",
-            packet[0], packet[1], packet[2], packet[3], packet[4], packet[5],
-        );
+        let ethernet = EthernetPacket::new(packet)?;
 
-        let src_mac = format!(
-            "{:x}:{:x}:{:x}:{:x}:{:x}:{:x}",
-            packet[6], packet[7], packet[8], packet[9], packet[10], packet[11],
-        );
+        match ethernet.get_ethertype() {
+            EtherTypes::Ipv4 => {
+                let ipv4 = Ipv4Packet::new(ethernet.payload())?;
 
-        let packet_type = (packet[12], packet[13]);
+                let (src_port, dst_port) = match ipv4.get_next_level_protocol() {
+                    IpNextHeaderProtocols::Udp => {
+                        let udp = UdpPacket::new(ipv4.payload())?;
 
-        match packet_type {
-            // IPV4
-            (0x08, 0x00) => {
-                let protocol = Protocol::from(packet[23])?;
+                        (Some(udp.get_source()), Some(udp.get_destination()))
+                    }
+                    IpNextHeaderProtocols::Tcp => {
+                        let tcp = TcpPacket::new(ipv4.payload())?;
 
-                Some(Self {
-                    protocol,
-                    src_mac,
-                    dst_mac,
-                    src_ip: Some([packet[26], packet[27], packet[28], packet[29]].into()),
-                    dst_ip: Some([packet[30], packet[31], packet[32], packet[33]].into()),
-                    src_port: u16::from_str_radix(&format!("{:x}{:x}", packet[34], packet[35]), 16)
-                        .ok(),
-                    dst_port: u16::from_str_radix(&format!("{:x}{:x}", packet[36], packet[37]), 16)
-                        .ok(),
-                    len: packet.len() as u32,
+                        (Some(tcp.get_source()), Some(tcp.get_destination()))
+                    }
+                    _ => (None, None),
+                };
+
+                Some(PacketInfo {
+                    protocol: ipv4.get_next_level_protocol().to_string(),
+                    src_mac: ethernet.get_source().to_string(),
+                    dst_mac: ethernet.get_destination().to_string(),
+                    src_ip: Some(ipv4.get_source().into()),
+                    dst_ip: Some(ipv4.get_destination().into()),
+                    src_port,
+                    dst_port,
+                    len: ipv4.payload().len() as u32,
                 })
             }
-            // IPV6
-            (0x86, 0xdd) => {
-                let protocol = Protocol::from(packet[20])?;
+            EtherTypes::Ipv6 => {
+                let ipv6 = Ipv6Packet::new(ethernet.payload())?;
 
-                Some(Self {
-                    protocol,
-                    src_mac,
-                    dst_mac,
-                    src_ip: Some(
-                        [
-                            packet[22], packet[23], packet[24], packet[25], packet[26], packet[27],
-                            packet[28], packet[29], packet[30], packet[31], packet[32], packet[33],
-                            packet[34], packet[35], packet[36], packet[37],
-                        ]
-                        .into(),
-                    ),
-                    dst_ip: Some(
-                        [
-                            packet[38], packet[39], packet[40], packet[41], packet[42], packet[43],
-                            packet[44], packet[45], packet[46], packet[47], packet[48], packet[49],
-                            packet[50], packet[51], packet[52], packet[53],
-                        ]
-                        .into(),
-                    ),
-                    src_port: u16::from_str_radix(&format!("{:x}{:x}", packet[54], packet[55]), 16)
-                        .ok(),
-                    dst_port: u16::from_str_radix(&format!("{:x}{:x}", packet[56], packet[57]), 16)
-                        .ok(),
-                    len: packet.len() as u32,
+                let (src_port, dst_port) = match ipv6.get_next_header() {
+                    IpNextHeaderProtocols::Udp => {
+                        let udp = UdpPacket::new(ipv6.payload())?;
+
+                        (Some(udp.get_source()), Some(udp.get_destination()))
+                    }
+                    IpNextHeaderProtocols::Tcp => {
+                        let tcp = TcpPacket::new(ipv6.payload())?;
+
+                        (Some(tcp.get_source()), Some(tcp.get_destination()))
+                    }
+                    _ => (None, None),
+                };
+
+                Some(PacketInfo {
+                    protocol: ipv6.get_next_header().to_string(),
+                    src_mac: ethernet.get_source().to_string(),
+                    dst_mac: ethernet.get_destination().to_string(),
+                    src_ip: Some(ipv6.get_source().into()),
+                    dst_ip: Some(ipv6.get_destination().into()),
+                    src_port,
+                    dst_port,
+                    len: ipv6.payload().len() as u32,
                 })
             }
-            // ETH
-            (0x08, 0x06) => Some(Self {
-                protocol: Protocol::Arp,
-                src_mac,
-                dst_mac,
+            EtherTypes::Arp => {
+                let arp = ArpPacket::new(ethernet.payload())?;
+                Some(PacketInfo {
+                    protocol: ethernet.get_ethertype().to_string(),
+                    src_mac: ethernet.get_source().to_string(),
+                    dst_mac: ethernet.get_destination().to_string(),
+                    src_ip: Some(arp.get_sender_proto_addr().into()),
+                    dst_ip: Some(arp.get_target_proto_addr().into()),
+                    src_port: None,
+                    dst_port: None,
+                    len: arp.payload().len() as u32,
+                })
+            }
+            _ => Some(PacketInfo {
+                protocol: ethernet.get_ethertype().to_string(),
+                src_mac: ethernet.get_source().to_string(),
+                dst_mac: ethernet.get_destination().to_string(),
                 src_ip: None,
                 dst_ip: None,
                 src_port: None,
                 dst_port: None,
-                len: packet.len() as u32,
+                len: ethernet.payload().len() as u32,
             }),
-            _ => None,
         }
     }
 }
@@ -96,7 +140,7 @@ impl std::fmt::Display for PacketInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[{}] {}{} -> {}{} ({} bytes) ",
+            "[{}] {}{} {} {}{} ({} bytes) ",
             self.protocol,
             if let Some(src_ip) = self.src_ip {
                 src_ip.to_string()
@@ -108,6 +152,7 @@ impl std::fmt::Display for PacketInfo {
             } else {
                 "".to_string()
             },
+            "->".blue(),
             if let Some(dst_ip) = self.dst_ip {
                 dst_ip.to_string()
             } else {

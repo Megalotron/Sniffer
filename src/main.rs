@@ -5,7 +5,6 @@ mod packet_streaming {
 mod args;
 mod logger;
 mod packet;
-mod protocol;
 mod sniffer;
 
 use packet_streaming::packet_streaming_client::PacketStreamingClient;
@@ -32,13 +31,13 @@ async fn main() {
         None => None,
     };
 
-    logger::get().info("Sniffer started");
+    logger::info("Sniffer started");
 
-    let stream = stream! {
+    let packet_stream = stream! {
         while let Ok(packet) = core.capture.next_packet() {
             match PacketInfo::from(&packet) {
-                Some(info) => logger::get().debug(format!("{}", info)),
-                None => logger::get().debug(format!("[{}] Could not parse the packet", "???".red())),
+                Some(info) => logger::debug(format!("{}", info)),
+                None => logger::debug(format!("[{}] Could not parse the packet", "???".red())),
             }
 
             if core.savefile.is_some() {
@@ -60,9 +59,9 @@ async fn main() {
     };
 
     if let Some(ref mut cli) = client {
-        cli.run(stream).await.unwrap();
+        cli.run(packet_stream).await.unwrap();
     } else {
-        pin_mut!(stream);
-        while (stream.next().await).is_some() {}
+        pin_mut!(packet_stream);
+        while (packet_stream.next().await).is_some() {}
     }
 }

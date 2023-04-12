@@ -2,41 +2,52 @@ use crate::args::Args;
 use crate::logger;
 use std::error::Error;
 
+/// `Sniffer` is a struct that contains a `capture` field of type `pcap::Capture<dyn pcap::Activated>`
+/// and a `savefile` field of type `Option<pcap::Savefile>`.
+///
+/// The `capture` field is a `pcap::Capture` object that is created by the
+/// `pcap::Capture::from_device()` function.
+///
+/// Properties:
+///
+/// * `capture`: This is the pcap::Capture object that we'll use to capture packets.
+/// * `savefile`: This is the file that the sniffer will save the packets to.
 pub struct Sniffer {
     pub capture: pcap::Capture<dyn pcap::Activated>,
     pub savefile: Option<pcap::Savefile>,
 }
 
 impl Sniffer {
+    /// It initializes the logger, sets the panic hook, sets the SIGINT handler, checks if the user
+    /// wants to read from a file or a network interface, and then creates a pcap capture object
+    ///
+    /// Arguments:
+    ///
+    /// * `args`: &Args
+    ///
+    /// Returns:
+    ///
+    /// A new instance of the Sniffer struct.
     pub fn new(args: &Args) -> Result<Self, Box<dyn Error>> {
-        let verbosity = match args.verbosity.as_str() {
-            "debug" => logger::LogLevel::Debug,
-            "info" => logger::LogLevel::Info,
-            "warn" => logger::LogLevel::Warn,
-            "error" => logger::LogLevel::Error,
-            _ => panic!("Invalid verbosity level, choose beetwen [debug, info, warn, error]"),
-        };
-
-        logger::init()
-            .stack("sniffer")
-            .verbosity(verbosity)
-            .logfile(&args.logfile)?
-            .run();
+        logger::set_stack("sniffer");
+        logger::set_verbosity(args.verbosity);
+        logger::set_logfile(&args.logfile)?;
+        logger::init();
 
         std::panic::set_hook(Box::new(|err| {
             if let Some(msg) = err.payload().downcast_ref::<&str>() {
-                logger::get().error(msg);
+                logger::error(msg);
             } else if let Some(msg) = err.payload().downcast_ref::<String>() {
-                logger::get().error(msg);
+                logger::error(msg);
             } else {
-                logger::get().error(err);
+                logger::error(err);
             }
             std::process::exit(84);
         }));
 
         ctrlc::set_handler(|| {
             print!("\r");
-            logger::get().warn("Sniffer killed by ^C");
+            logger::warn("Sniffer killed by ^C");
             std::process::exit(84);
         })
         .ok();
