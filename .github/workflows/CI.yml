@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: sudo apt update && sudo apt install -y libpcap-dev
+        run: sudo apt install libpcap-dev
 
       - name: Clippy
         run: cargo clippy --all --all-features -- -D warnings
@@ -44,89 +44,106 @@ jobs:
       - name: Format
         run: cargo fmt --all -- --check
 
-  linux:
-    name: linux (${{ matrix.arch_name }})
-    runs-on: ubuntu-latest
-    permissions: write-all
+  ci:
+    name: ${{ matrix.os }} - ${{ matrix.profile }}
+    runs-on: ${{ matrix.os }}
     needs: linter
+    permissions: write-all
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
+        os: [macos-latest, ubuntu-latest]
+        build: ['', --release]
         include:
-          - arch: x86_64-unknown-linux-gnu
-            arch_name: x86_64
-          - arch: aarch64-unknown-linux-gnu
-            arch_name: arm64
+          - os: macos-latest
+            os_name: macos
+            deps: brew install libpcap
+          - os: ubuntu-latest
+            os_name: linux
+            deps: sudo apt install libpcap-dev
+          - build: ''
+            profile: debug
+          - build: --release
+            profile: release
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install toolchain
-        run: rustup target add ${{ matrix.arch }}
+      - name: Install dependencies
+        run: ${{ matrix.deps }}
 
-      - name: Install gcc
-        run: sudo apt install gcc-aarch64-linux-gnu
+      - name: Build project
+        run: cargo build ${{ matrix.build }}
+
+      - name: Test project
+        run: |
+          cargo run ${{ matrix.build }} --bin sniffer-test-server &
+          sleep 1
+          cargo run ${{ matrix.build }} --bin sniffer -- --url http://0.0.0.0:50051 -v debug -r test/dataset.pcap
+          diff test/dataset.pcap server.pcap
+
+      - name: Save binary artifact
+        if: matrix.profile == 'release'
+        uses: actions/upload-artifact@v3
+        with:
+          name: sniffer-${{ matrix.os_name }}
+          path: target/release/sniffer
+          if-no-files-found: error
+
+      - name: Set binary name
+        if: matrix.profile == 'release' && github.event_name == 'release'
+        run: cp target/release/sniffer sniffer-${{ matrix.os_name }}
+
+      - name: Upload binary
+        if: matrix.profile == 'release' && github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: sniffer-${{ matrix.os_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  packaging:
+    name: packaging
+    runs-on: ubuntu-latest
+    needs: ci
+    permissions: write-all
+
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Install dependencies
         run: sudo apt install libpcap-dev
 
       - name: Build project
-        run: cargo build --release --target=${{ matrix.arch }}
-
-      - name: Test project
-        run: |
-          ./target/${{ matrix.arch }}/release/sniffer-test-server &
-          sleep 1
-          ./target/${{ matrix.arch }}/release/sniffer --url http://0.0.0.0:50051 -v debug -r test/dataset.pcap
-          diff test/dataset.pcap server.pcap
-
-      - name: Save binary artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: sniffer-linux-${{ matrix.arch_name }}
-          path: target/${{ matrix.arch }}/release/sniffer
-          if-no-files-found: error
-
-      - name: Set binary name
-        if: github.event_name == 'release'
-        run: cp target/${{ matrix.arch }}/release/sniffer sniffer-linux-${{ matrix.arch_name }}
-
-      - name: Upload binary
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: sniffer-linux-${{ matrix.arch_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo build --release
 
       - name: Install cargo-deb
         run: cargo install cargo-deb
 
       - name: Build debian package
-        run: cargo deb --target=${{ matrix.arch }} -o sniffer-debian-${{ matrix.arch_name }}.deb
+        run: cargo deb -o sniffer-debian.deb
 
       - name: Save debian artifact
         uses: actions/upload-artifact@v3
         with:
-          name: sniffer-debian-${{ matrix.arch_name }}.deb
-          path: ./sniffer-debian-${{ matrix.arch_name }}.deb
+          name: sniffer-debian.deb
+          path: ./sniffer-debian.deb
           if-no-files-found: error
       
       - name: Install alien
         run: sudo apt install alien
 
       - name: Build redhat package
-        run: alien ./sniffer-debian-${{ matrix.arch_name }}.deb -k --to-rpm
+        run: alien ./sniffer-debian.deb -k --to-rpm
 
       - name: Set package name
-        run: mv *.rpm sniffer-redhat-${{ matrix.arch_name }}.rpm
+        run: mv *.rpm sniffer-redhat.rpm
 
       - name: Save redhat artifact
         uses: actions/upload-artifact@v3
         with:
-          name: sniffer-redhat-${{ matrix.arch_name }}.rpm
-          path: ./sniffer-redhat-${{ matrix.arch_name }}.rpm
+          name: sniffer-redhat.rpm
+          path: ./sniffer-redhat.rpm
           if-no-files-found: error
 
       - name: Upload packages
@@ -134,114 +151,15 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./sniffer-debian-${{ matrix.arch_name }}.deb
-            ./sniffer-redhat-${{ matrix.arch_name }}.rpm
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  mac_os:
-    name: macOS (${{ matrix.arch_name }})
-    runs-on: macos-latest
-    permissions: write-all
-    needs: linter
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86_64-apple-darwin, aarch64-apple-darwin]
-        include:
-          - arch: x86_64-apple-darwin
-            arch_name: intel
-          - arch: aarch64-apple-darwin
-            arch_name: silicon
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install toolchain
-        run: rustup target add ${{ matrix.arch }}
-
-      - name: Install dependencies
-        run: brew install libpcap
-
-      - name: Build project
-        run: cargo build --release --target=${{ matrix.arch }}
-
-      - name: Test project
-        run: |
-          ./target/${{ matrix.arch }}/release/sniffer-test-server &
-          sleep 1
-          ./target/${{ matrix.arch }}/release/sniffer --url http://0.0.0.0:50051 -v debug -r test/dataset.pcap
-          diff test/dataset.pcap server.pcap
-
-      - name: Save artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: sniffer-macos-${{ matrix.arch_name }}
-          path: target/${{ matrix.arch }}/release/sniffer
-          if-no-files-found: error
-
-      - name: Set binary name
-        if: github.event_name == 'release'
-        run: cp target/${{ matrix.arch }}/release/sniffer sniffer-macos-${{ matrix.arch_name }}
-
-      - name: Upload binary
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: sniffer-macos-${{ matrix.arch_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  windows:
-    name: windows (${{ matrix.arch_name }})
-    runs-on: windows-latest
-    permissions: write-all
-    needs: linter
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86_64-pc-windows-msvc, aarch64-pc-windows-msvc]
-        include:
-          - arch: x86_64-pc-windows-msvc
-            arch_name: x86_64
-          - arch: aarch64-pc-windows-msvc
-            arch_name: arm64
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install toolchain
-        run: rustup target add ${{ matrix.arch }}
-
-      - name: Install dependencies
-        run: choco install winpcap
-
-      - name: Build project
-        run: cargo build --release --target=${{ matrix.arch }}
-
-      - name: Save artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: sniffer-windows-${{ matrix.arch_name }}.exe
-          path: target/${{ matrix.arch }}/release/sniffer.exe
-          if-no-files-found: error
-
-      - name: Set binary name
-        if: github.event_name == 'release'
-        run: cp target/${{ matrix.arch }}/release/sniffer.exe sniffer-windows-${{ matrix.arch_name }}.exe
-
-      - name: Upload binary
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: sniffer-windows-${{ matrix.arch_name }}.exe
+            ./sniffer-debian.deb
+            ./sniffer-redhat.rpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: build binary
     runs-on: ubuntu-latest
-    needs: linux
+    needs: ci
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
