@@ -2,31 +2,27 @@
 # Builder stage
 # Install dependencies and build rust binary
 ###
-FROM rust:alpine as builder
+FROM rust:latest AS builder
 
 WORKDIR /app
-
-# Copy sources
 COPY . .
 
 # Install dependencies
-RUN apk add --no-cache musl-dev libpcap-dev
+RUN apt update && apt install -y libpcap0.8-dev
 
-# Update dependencies
-RUN cargo update
-
-# Build application
-RUN cargo build --release
+# Build and install application
+RUN cargo build --bin sniffer --release
 
 ###
 # App stage
 # Final application container
 ###
-FROM alpine AS app
+FROM debian:buster-slim
 
-RUN apk add --no-cache musl-dev libpcap-dev
+# Install dependencies
+RUN apt update && apt install -y libpcap0.8
 
-COPY --from=builder /app/target/release/sniffer /sniffer
+# Copy binary in final container
+COPY --from=builder /app/target/release/sniffer /bin/sniffer
 
-ENTRYPOINT [ "/sniffer" ]
-
+ENTRYPOINT ["sniffer"]
