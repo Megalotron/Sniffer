@@ -95,3 +95,11 @@ jobs:
           push: false
           cache-from: type=gha,scope=sniffer
           cache-to: type=gha,mode=max,scope=sniffer
+          tag: ghcr.io/megalotron/sniffer
+          outputs: type=image,name=ghcr.io/megalotron/sniffer
+
+      - name: Scan built image
+        uses: azure/container-scan@v0
+        continue-on-error: true # Continue scanning even on error
+        with:
+          image-name: ghcr.io/megalotron/sniffer

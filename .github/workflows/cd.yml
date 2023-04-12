@@ -1,0 +1,41 @@
+name: Continunous deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - src/*
+      - .github/workflows/cd.yml
+      - Cargo.toml
+      - Dockerfile
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-push:
+    name: Build and push image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Loging to GH registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/megalotron/sniffer:latest
