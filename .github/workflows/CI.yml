@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: CI
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - src/*
-      - .github/workflows/*
+      - .github/workflows/CI.yml
       - Cargo.toml
       - Dockerfile
   pull_request:
@@ -14,28 +14,26 @@ on:
       - main
     paths:
       - src/*
-      - .github/workflows/*
+      - .github/workflows/CI.yml
       - Cargo.toml
       - Dockerfile
-
-defaults:
-  run:
-    shell: bash
+  release:
+    types: [published]
 
 jobs:
-  conventional_commits:
-    name: conventional commits
+  commits:
+    name: commits
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: webiny/action-conventional-commits@v1.0.5
+      - uses: actions/checkout@v3
+      - uses: webiny/action-conventional-commits@v1.1.0
 
   linter:
     name: linter
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install dependencies
         run: sudo apt update && sudo apt install -y libpcap-dev
@@ -46,45 +44,204 @@ jobs:
       - name: Format
         run: cargo fmt --all -- --check
 
-  ci:
+  linux:
+    name: linux (${{ matrix.arch_name }})
+    runs-on: ubuntu-latest
+    permissions: write-all
     needs: linter
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
-        build: ['', --release]
+        arch: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
         include:
-          - os: macos-latest
-            deps: brew install libpcap
-          - os: ubuntu-latest
-            deps: sudo apt update && sudo apt install -y libpcap-dev
-          - build: ''
-            profile: debug
-          - build: --release
-            profile: release
-    name: ${{ matrix.os }} - ${{ matrix.profile }}
-    runs-on: ${{ matrix.os }}
+          - arch: x86_64-unknown-linux-gnu
+            arch_name: x86_64
+          - arch: aarch64-unknown-linux-gnu
+            arch_name: arm64
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+
+      - name: Install toolchain
+        run: rustup target add ${{ matrix.arch }}
+
+      - name: Install gcc
+        run: sudo apt install gcc-aarch64-linux-gnu
 
       - name: Install dependencies
-        run: ${{ matrix.deps }}
+        run: sudo apt install libpcap-dev
 
       - name: Build project
-        run: cargo build ${{ matrix.build }}
+        run: cargo build --release --target=${{ matrix.arch }}
 
       - name: Test project
         run: |
-          cargo run ${{ matrix.build }} --bin sniffer-test-server &
+          ./target/${{ matrix.arch }}/release/sniffer-test-server &
           sleep 1
-          cargo run ${{ matrix.build }} --bin sniffer -- --url http://0.0.0.0:50051 -v debug -r test/dataset.pcap
+          ./target/${{ matrix.arch }}/release/sniffer --url http://0.0.0.0:50051 -v debug -r test/dataset.pcap
           diff test/dataset.pcap server.pcap
+
+      - name: Save binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sniffer-linux-${{ matrix.arch_name }}
+          path: target/${{ matrix.arch }}/release/sniffer
+          if-no-files-found: error
+
+      - name: Set binary name
+        if: github.event_name == 'release'
+        run: cp target/${{ matrix.arch }}/release/sniffer sniffer-linux-${{ matrix.arch_name }}
+
+      - name: Upload binary
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: sniffer-linux-${{ matrix.arch_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cargo-deb
+        run: cargo install cargo-deb
+
+      - name: Build debian package
+        run: cargo deb --target=${{ matrix.arch }} -o sniffer-debian-${{ matrix.arch_name }}.deb
+
+      - name: Save debian artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sniffer-debian-${{ matrix.arch_name }}.deb
+          path: ./sniffer-debian-${{ matrix.arch_name }}.deb
+          if-no-files-found: error
+      
+      - name: Install alien
+        run: sudo apt install alien
+
+      - name: Build redhat package
+        run: alien ./sniffer-debian-${{ matrix.arch_name }}.deb -k --to-rpm
+
+      - name: Set package name
+        run: mv *.rpm sniffer-redhat-${{ matrix.arch_name }}.rpm
+
+      - name: Save redhat artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sniffer-redhat-${{ matrix.arch_name }}.rpm
+          path: ./sniffer-redhat-${{ matrix.arch_name }}.rpm
+          if-no-files-found: error
+
+      - name: Upload packages
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./sniffer-debian-${{ matrix.arch_name }}.deb
+            ./sniffer-redhat-${{ matrix.arch_name }}.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  mac_os:
+    name: macOS (${{ matrix.arch_name }})
+    runs-on: macos-latest
+    permissions: write-all
+    needs: linter
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64-apple-darwin, aarch64-apple-darwin]
+        include:
+          - arch: x86_64-apple-darwin
+            arch_name: intel
+          - arch: aarch64-apple-darwin
+            arch_name: silicon
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install toolchain
+        run: rustup target add ${{ matrix.arch }}
+
+      - name: Install dependencies
+        run: brew install libpcap
+
+      - name: Build project
+        run: cargo build --release --target=${{ matrix.arch }}
+
+      - name: Test project
+        run: |
+          ./target/${{ matrix.arch }}/release/sniffer-test-server &
+          sleep 1
+          ./target/${{ matrix.arch }}/release/sniffer --url http://0.0.0.0:50051 -v debug -r test/dataset.pcap
+          diff test/dataset.pcap server.pcap
+
+      - name: Save artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sniffer-macos-${{ matrix.arch_name }}
+          path: target/${{ matrix.arch }}/release/sniffer
+          if-no-files-found: error
+
+      - name: Set binary name
+        if: github.event_name == 'release'
+        run: cp target/${{ matrix.arch }}/release/sniffer sniffer-macos-${{ matrix.arch_name }}
+
+      - name: Upload binary
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: sniffer-macos-${{ matrix.arch_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  windows:
+    name: windows (${{ matrix.arch_name }})
+    runs-on: windows-latest
+    permissions: write-all
+    needs: linter
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64-pc-windows-msvc, aarch64-pc-windows-msvc]
+        include:
+          - arch: x86_64-pc-windows-msvc
+            arch_name: x86_64
+          - arch: aarch64-pc-windows-msvc
+            arch_name: arm64
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install toolchain
+        run: rustup target add ${{ matrix.arch }}
+
+      - name: Install dependencies
+        run: choco install winpcap
+
+      - name: Build project
+        run: cargo build --release --target=${{ matrix.arch }}
+
+      - name: Save artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sniffer-windows-${{ matrix.arch_name }}.exe
+          path: target/${{ matrix.arch }}/release/sniffer.exe
+          if-no-files-found: error
+
+      - name: Set binary name
+        if: github.event_name == 'release'
+        run: cp target/${{ matrix.arch }}/release/sniffer.exe sniffer-windows-${{ matrix.arch_name }}.exe
+
+      - name: Upload binary
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: sniffer-windows-${{ matrix.arch_name }}.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: build binary
     runs-on: ubuntu-latest
-    needs: ci
+    needs: linux
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
