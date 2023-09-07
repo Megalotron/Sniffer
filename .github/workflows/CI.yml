@@ -82,26 +82,6 @@ jobs:
           cargo run ${{ matrix.build }} --bin sniffer -- --url http://0.0.0.0:50051 -v debug -r test/dataset.pcap
           diff test/dataset.pcap server.pcap
 
-      - name: Save binary artifact
-        if: matrix.profile == 'release'
-        uses: actions/upload-artifact@v3
-        with:
-          name: sniffer-${{ matrix.os_name }}
-          path: target/release/sniffer
-          if-no-files-found: error
-
-      - name: Set binary name
-        if: matrix.profile == 'release' && github.event_name == 'release'
-        run: cp target/release/sniffer sniffer-${{ matrix.os_name }}
-
-      - name: Upload binary
-        if: matrix.profile == 'release' && github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: sniffer-${{ matrix.os_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   packaging:
     name: packaging
     runs-on: ubuntu-latest
@@ -112,16 +92,22 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: sudo apt install libpcap-dev
+        run: sudo apt install build-essential libpcap-dev ruby ruby-dev rubygems
+
+      - name: Install fpm
+        run: gem install --no-ri --no-rdoc fpm
 
       - name: Build project
         run: cargo build --release
 
-      - name: Install cargo-deb
-        run: cargo install cargo-deb
-
       - name: Build debian package
-        run: cargo deb -o sniffer-debian.deb
+        run: fpm -t deb -p sniffer-debian.deb --depends libpcap0.8
+
+      - name: Build redhat package
+        run: fpm -t rpm -p sniffer-redhat.rpm --depends libpcap
+
+      - name: Build archlinux package
+        run: fpm -t pacman -p sniffer-archlinux.pkg.tar.zst --depends libpcap
 
       - name: Save debian artifact
         uses: actions/upload-artifact@v3
@@ -129,21 +115,19 @@ jobs:
           name: sniffer-debian.deb
           path: ./sniffer-debian.deb
           if-no-files-found: error
-      
-      - name: Install alien
-        run: sudo apt install alien
-
-      - name: Build redhat package
-        run: alien ./sniffer-debian.deb -k --to-rpm
-
-      - name: Set package name
-        run: mv *.rpm sniffer-redhat.rpm
 
       - name: Save redhat artifact
         uses: actions/upload-artifact@v3
         with:
           name: sniffer-redhat.rpm
           path: ./sniffer-redhat.rpm
+          if-no-files-found: error
+
+      - name: Save archlinux artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sniffer-archlinux.pkg.tar.zst
+          path: ./sniffer-archlinux.pkg.tar.zst
           if-no-files-found: error
 
       - name: Upload packages
@@ -153,6 +137,7 @@ jobs:
           files: |
             ./sniffer-debian.deb
             ./sniffer-redhat.rpm
+            ./sniffer-archlinux.pkg.tar.zst
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -175,6 +160,6 @@ jobs:
 
       - name: Scan built image
         uses: azure/container-scan@v0
-        continue-on-error: true # Continue scanning even on error
+        continue-on-error: true
         with:
           image-name: ghcr.io/megalotron/sniffer

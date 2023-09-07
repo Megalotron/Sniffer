@@ -42,16 +42,3 @@ async-stream = "0.3.5"
 tonic-build = "0.9.1"
 prost-build = "0.11.9"
 protobuf-src = "1.1.0"
-
-[package.metadata.deb]
-copyright = "2023, Megalotron"
-maintainer = "Martin Olivier <martin.olivier@live.fr>"
-license-file = ["LICENSE"]
-extended-description = "Sniff a network interface and send the collected data over a grpc stream"
-depends = "libpcap0.8"
-priority = "optional"
-section = "utility"
-assets = [
-    ["target/release/sniffer", "/usr/bin/sniffer", "755"],
-    ["README.md", "/usr/share/doc/sniffer/README", "644"],
-]

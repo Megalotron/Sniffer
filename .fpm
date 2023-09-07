@@ -1,0 +1,10 @@
+-s dir ./target/release/sniffer
+--name sniffer
+--license MIT
+--version 0.1.0
+--architecture all
+--description "The sniffer of Megalotron"
+--url "https://github.com/Megalotron/Sniffer"
+--maintainer "Martin Olivier <martin.olivier@live.fr>"
+
+target/release/sniffer=/usr/bin/sniffer
