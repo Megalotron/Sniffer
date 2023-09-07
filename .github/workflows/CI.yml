@@ -95,7 +95,7 @@ jobs:
         run: sudo apt install build-essential libpcap-dev ruby ruby-dev rubygems
 
       - name: Install fpm
-        run: gem install fpm
+        run: sudo gem install fpm
 
       - name: Build project
         run: cargo build --release
