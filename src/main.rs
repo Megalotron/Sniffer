@@ -37,42 +37,39 @@ async fn main() {
         while let Ok(packet) = core.capture.next_packet() {
             match PacketInfo::from(&packet) {
                 Some(info) => {
-                    match core.blacklist {
-                        Some(ref blacklist) => {
-                            if blacklist.from.contains(&info.src_mac) {
+                    if let Some(ref blacklist) = core.blacklist {
+                        if blacklist.from.contains(&info.src_mac) {
+                            logger::debug(format!("IGNORED: {}", info));
+                            continue;
+                        }
+                        if blacklist.into.contains(&info.dst_mac) {
+                            logger::debug(format!("IGNORED: {}", info));
+                            continue;
+                        }
+                        if let Some(ip) = info.src_ip {
+                            if blacklist.from.contains(&ip.to_string()) {
                                 logger::debug(format!("IGNORED: {}", info));
                                 continue;
                             }
-                            if blacklist.into.contains(&info.dst_mac) {
-                                logger::debug(format!("IGNORED: {}", info));
-                                continue;
-                            }
-                            if let Some(ip) = info.src_ip {
-                                if blacklist.from.contains(&ip.to_string()) {
+                            if let Some(port) = info.src_port {
+                                if blacklist.from.contains(&format!("{}:{}", ip, port)) {
                                     logger::debug(format!("IGNORED: {}", info));
                                     continue;
-                                }
-                                if let Some(port) = info.src_port {
-                                    if blacklist.from.contains(&format!("{}:{}", ip, port)) {
-                                        logger::debug(format!("IGNORED: {}", info));
-                                        continue;
-                                    }
-                                }
-                            }
-                            if let Some(ip) = info.dst_ip {
-                                if blacklist.into.contains(&ip.to_string()) {
-                                    logger::debug(format!("IGNORED: {}", info));
-                                    continue;
-                                }
-                                if let Some(port) = info.dst_port {
-                                    if blacklist.into.contains(&format!("{}:{}", ip, port)) {
-                                        logger::debug(format!("IGNORED: {}", info));
-                                        continue;
-                                    }
                                 }
                             }
                         }
-                        None => {}
+                        if let Some(ip) = info.dst_ip {
+                            if blacklist.into.contains(&ip.to_string()) {
+                                logger::debug(format!("IGNORED: {}", info));
+                                continue;
+                            }
+                            if let Some(port) = info.dst_port {
+                                if blacklist.into.contains(&format!("{}:{}", ip, port)) {
+                                    logger::debug(format!("IGNORED: {}", info));
+                                    continue;
+                                }
+                            }
+                        }
                     }
                     logger::debug(format!("{}", info))
                 }

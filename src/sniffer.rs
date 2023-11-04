@@ -87,10 +87,7 @@ impl Sniffer {
                 let data = std::fs::read_to_string(file)?;
                 let conf: Blacklist = match toml::from_str(&data) {
                     Ok(blacklist) => blacklist,
-                    Err(err) => {
-                        logger::error(format!("Could not parse the blacklist file: {}", err));
-                        std::process::exit(84);
-                    }
+                    Err(err) => panic!("Could not parse the blacklist file: {}", err),
                 };
 
                 Some(conf)
@@ -98,6 +95,10 @@ impl Sniffer {
             None => None,
         };
 
-        Ok(Self { capture, savefile, blacklist })
+        Ok(Self {
+            capture,
+            savefile,
+            blacklist,
+        })
     }
 }
