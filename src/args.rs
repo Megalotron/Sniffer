@@ -36,4 +36,8 @@ pub struct Args {
     /// Use a specific network interface instead of the default one
     #[clap(short, long, value_parser)]
     pub interface: Option<String>,
+
+    /// Use a blacklist configuration file to filter packets
+    #[clap(short, long, value_parser)]
+    pub blacklist: Option<String>,
 }
