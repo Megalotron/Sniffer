@@ -41,6 +41,6 @@ toml = "0.8.1"
 serde = { version = "1.0.188", features = ["derive"] }
 
 [build-dependencies]
-tonic-build = "0.9.1"
+tonic-build = "0.10.2"
 prost-build = "0.11.9"
 protobuf-src = "1.1.0"
