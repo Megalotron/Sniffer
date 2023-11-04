@@ -2,6 +2,12 @@ use crate::args::Args;
 use crate::logger;
 use std::error::Error;
 
+#[derive(serde::Deserialize)]
+pub struct Blacklist {
+    pub from: Vec<String>,
+    pub into: Vec<String>,
+}
+
 /// `Sniffer` is a struct that contains a `capture` field of type `pcap::Capture<dyn pcap::Activated>`
 /// and a `savefile` field of type `Option<pcap::Savefile>`.
 ///
@@ -15,6 +21,7 @@ use std::error::Error;
 pub struct Sniffer {
     pub capture: pcap::Capture<dyn pcap::Activated>,
     pub savefile: Option<pcap::Savefile>,
+    pub blacklist: Option<Blacklist>,
 }
 
 impl Sniffer {
@@ -75,6 +82,23 @@ impl Sniffer {
             None => None,
         };
 
-        Ok(Self { capture, savefile })
+        let blacklist: Option<Blacklist> = match args.blacklist {
+            Some(ref file) => {
+                let data = std::fs::read_to_string(file)?;
+                let conf: Blacklist = match toml::from_str(&data) {
+                    Ok(blacklist) => blacklist,
+                    Err(err) => panic!("Could not parse the blacklist file: {}", err),
+                };
+
+                Some(conf)
+            }
+            None => None,
+        };
+
+        Ok(Self {
+            capture,
+            savefile,
+            blacklist,
+        })
     }
 }

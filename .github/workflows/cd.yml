@@ -1,4 +1,4 @@
-name: Continunous deployment
+name: CD
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - src/*
-      - .github/workflows/cd.yml
+      - .github/workflows/CD.yml
       - Cargo.toml
       - Dockerfile
 
