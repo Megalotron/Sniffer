@@ -31,7 +31,7 @@ lazy_static = "1.4.0"
 colored = "2.0.0"
 
 tonic = "0.9.1"
-prost = "0.11.9"
+prost = "0.12.3"
 prost-types = "0.11.9"
 
 tokio = { version = "1.27.0", features = ["rt-multi-thread", "macros"] }
